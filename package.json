@@ -3,12 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "TURBOPACK=0 NEXT_DISABLE_TURBOPACK=1 next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
+    "busboy": "^1.6.0",
+    "duckdb": "^1.4.2",
     "next": "16.0.5",
     "react": "19.2.0",
     "react-dom": "19.2.0"
