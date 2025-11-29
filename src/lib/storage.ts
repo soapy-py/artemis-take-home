@@ -2,7 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 
-const UPLOADS_ROOT = path.join(process.cwd(), "uploads");
+// Prefer a writable temp directory in serverless (e.g., Vercel). Default to a local
+// uploads folder for local dev. Can be overridden via UPLOADS_ROOT.
+const UPLOADS_ROOT =
+  process.env.UPLOADS_ROOT ??
+  (process.env.VERCEL ? "/tmp/uploads" : path.join(process.cwd(), "uploads"));
 
 function ensureUploadsRoot() {
   if (!fs.existsSync(UPLOADS_ROOT)) {
@@ -46,4 +50,3 @@ export function resolveWorkspace(uploadId: string): WorkspacePaths {
     dbPath: path.join(workspaceDir, "data.duckdb"),
   };
 }
-
