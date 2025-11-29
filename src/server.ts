@@ -29,7 +29,7 @@ app.post("/api/upload", async (req, res) => {
   let fileSaved = false;
   const writePromises: Array<Promise<void>> = [];
 
-  busboy.on("file", (_, fileStream) => {
+  busboy.on("file", (_: string, fileStream: NodeJS.ReadableStream) => {
     if (fileSaved) {
       fileStream.resume();
       return;
@@ -41,7 +41,7 @@ app.post("/api/upload", async (req, res) => {
   });
 
   const parsingPromise = new Promise<void>((resolve, reject) => {
-    busboy.on("error", (err) => reject(err));
+    busboy.on("error", (err: Error) => reject(err));
     busboy.on("finish", () => resolve());
   });
 
