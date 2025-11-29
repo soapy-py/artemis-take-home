@@ -117,7 +117,8 @@ export async function runUserQuery(
 
   return withConnection(dbPath, async (conn) => {
     // Apply the row cap directly to the user query to avoid metadata quirks from nested SELECTs.
-    const limitedSql = `${trimmed} LIMIT ${MAX_QUERY_ROWS + 1}`;
+    const hasLimit = /\blimit\b/i.test(trimmed);
+    const limitedSql = hasLimit ? trimmed : `${trimmed} LIMIT ${MAX_QUERY_ROWS + 1}`;
 
     const start = performance.now();
     const rows = await new Promise<DuckRow[]>((resolve, reject) => {
