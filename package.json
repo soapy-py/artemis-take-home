@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "TURBOPACK=0 NEXT_DISABLE_TURBOPACK=1 next dev",
-    "build": "next build",
+    "build": "TURBOPACK=0 NEXT_DISABLE_TURBOPACK=1 next build --no-turbo",
     "start": "next start",
     "lint": "eslint"
   },
