@@ -178,9 +178,7 @@ export default function App() {
               </span>
               <div>
                 <h2 className="text-2xl font-semibold text-white">Upload CSV</h2>
-                <p className="text-base text-slate-200">
-                  Large files stream directly to disk, keeping memory usage predictable.
-                </p>
+                <p className="text-base text-slate-200">Upload your CSV to get started.</p>
               </div>
             </div>
             <label
@@ -224,11 +222,6 @@ export default function App() {
               </span>
               <div>
                 <h2 className="text-2xl font-semibold text-white">Write SQL against tablename</h2>
-                <p className="text-base text-slate-200">
-                  Reference the dataset as{" "}
-                  <code className="rounded bg-white/20 px-1 py-0.5 font-mono text-sm text-white">tablename</code>{" "}
-                  —only SELECT queries are allowed.
-                </p>
               </div>
             </div>
             <div className="space-y-4 rounded-2xl border border-white/30 bg-black/30 px-6 py-10">
@@ -264,9 +257,7 @@ export default function App() {
               </span>
               <div>
                 <h2 className="text-2xl font-semibold text-white">Inspect results</h2>
-                <p className="text-base text-slate-200">
-                  Results are capped at 1,000 rows per query to keep responses snappy.
-                </p>
+                <p className="text-base text-slate-200">Run your query and inspect the rows.</p>
               </div>
             </div>
             <div className="space-y-4 rounded-2xl border border-white/30 bg-black/30 px-6 py-10">
@@ -283,7 +274,6 @@ export default function App() {
                           {queryResult.columns.map((col) => (
                             <th key={col.name} className="px-4 py-2 font-semibold">
                               <div>{col.name}</div>
-                              <div className="text-xs font-normal text-slate-200">{col.type}</div>
                             </th>
                           ))}
                         </tr>
