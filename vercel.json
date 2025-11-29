@@ -1,8 +1,10 @@
 {
-  "buildCommand": "NEXT_DISABLE_TURBOPACK=1 TURBOPACK=0 npm run build",
+  "buildCommand": "VERCEL_TURBOPACK=0 VERCEL_EXPERIMENTAL_TURBOPACK=0 NEXT_DISABLE_TURBOPACK=1 TURBOPACK=0 npm run build",
   "env": {
     "NEXT_DISABLE_TURBOPACK": "1",
     "TURBOPACK": "0",
+    "VERCEL_TURBOPACK": "0",
+    "VERCEL_EXPERIMENTAL_TURBOPACK": "0",
     "UPLOADS_ROOT": "/tmp/uploads"
   }
 }
