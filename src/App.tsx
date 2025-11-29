@@ -1,6 +1,6 @@
-"use client";
-
 import { useEffect, useState } from "react";
+
+import "./globals.css";
 
 type ColumnMeta = {
   name: string;
@@ -28,7 +28,9 @@ WHERE department = 'Engineering'
   AND hire_date < '2020-01-01'
 ORDER BY salary DESC;`;
 
-export default function Home() {
+const API_BASE = import.meta.env.VITE_API_BASE ?? "";
+
+export default function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState<
     "idle" | "uploading" | "processing"
@@ -62,7 +64,7 @@ export default function Home() {
     formData.append("file", file);
 
     try {
-      const response = await fetch("/api/upload", {
+      const response = await fetch(`${API_BASE}/api/upload`, {
         method: "POST",
         body: formData,
       });
@@ -90,7 +92,7 @@ export default function Home() {
     setIsQuerying(true);
     setQueryResult(null);
     try {
-      const response = await fetch("/api/query", {
+      const response = await fetch(`${API_BASE}/api/query`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ uploadId, sql }),
@@ -99,7 +101,13 @@ export default function Home() {
       if (!response.ok) {
         throw new Error(payload.error ?? "Query failed");
       }
-      setQueryResult(payload);
+      const safeResult: QueryResult = {
+        columns: Array.isArray(payload.columns) ? payload.columns : [],
+        rows: Array.isArray(payload.rows) ? payload.rows : [],
+        truncated: Boolean(payload.truncated),
+        executionTimeMs: Number(payload.executionTimeMs ?? 0),
+      };
+      setQueryResult(safeResult);
     } catch (error) {
       setQueryError((error as Error).message);
     } finally {
@@ -130,14 +138,12 @@ export default function Home() {
           <h1 className="text-6xl font-semibold leading-tight sm:text-7xl">
             CSV and SQL tool
           </h1>
-          <p className="mx-auto max-w-2xl text-xl text-slate-200">
-            Sophie Chen
-          </p>
+          <p className="mx-auto max-w-2xl text-xl text-slate-200">Sophie Chen</p>
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <button
               type="button"
               onClick={() => scrollToSection("upload-section")}
-          className="rounded-full border border-white/30 bg-white/10 px-8 py-3 text-base font-semibold text-white shadow-lg shadow-black/40 transition hover:-translate-y-0.5 hover:bg-white/20"
+              className="rounded-full border border-white/30 bg-white/10 px-8 py-3 text-base font-semibold text-white shadow-lg shadow-black/40 transition hover:-translate-y-0.5 hover:bg-white/20"
             >
               Start with a CSV
             </button>
@@ -154,13 +160,7 @@ export default function Home() {
           className="relative z-10 mt-20 flex h-14 w-14 items-center justify-center rounded-full border border-white/40 text-white transition hover:border-white hover:bg-white/10"
           aria-label="Scroll down"
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            className="h-6 w-6"
-          >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-6 w-6">
             <path d="M6 10l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
@@ -187,13 +187,7 @@ export default function Home() {
               htmlFor="csv-upload"
               className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-white/30 bg-black/30 px-6 py-10 text-center text-white transition hover:border-white/70"
             >
-              <input
-                id="csv-upload"
-                type="file"
-                accept=".csv,text/csv"
-                className="hidden"
-                onChange={onFileChange}
-              />
+              <input id="csv-upload" type="file" accept=".csv,text/csv" className="hidden" onChange={onFileChange} />
               <span className="text-lg font-medium">
                 {selectedFile ? selectedFile.name : "Drop your CSV or click to browse"}
               </span>
@@ -205,9 +199,7 @@ export default function Home() {
                   {uploadStatus === "uploading" ? "Uploading..." : "Processing..."}
                 </span>
               )}
-              {uploadError && (
-                <span className="text-sm text-rose-300">{uploadError}</span>
-              )}
+              {uploadError && <span className="text-sm text-rose-300">{uploadError}</span>}
             </label>
             {summary && (
               <div className="grid gap-3 rounded-2xl border border-white/15 bg-black/30 p-4 text-sm text-slate-100">
@@ -217,9 +209,7 @@ export default function Home() {
                 </div>
                 <div className="leading-6">
                   <span className="font-semibold text-white">Columns:</span>{" "}
-                  {summary.columns
-                    .map((col) => `${col.name} (${col.type})`)
-                    .join(", ")}
+                  {summary.columns.map((col) => `${col.name} (${col.type})`).join(", ")}
                 </div>
               </div>
             )}
@@ -233,41 +223,35 @@ export default function Home() {
                 2
               </span>
               <div>
-                <h2 className="text-2xl font-semibold text-white">
-                  Write SQL against tablename
-                </h2>
+                <h2 className="text-2xl font-semibold text-white">Write SQL against tablename</h2>
                 <p className="text-base text-slate-200">
-                  Reference the dataset as{" "}  
-                  <code className="rounded bg-white/20 px-1 py-0.5 font-mono text-sm text-white">
-                    tablename
-                  </code>{" "}
+                  Reference the dataset as{" "}
+                  <code className="rounded bg-white/20 px-1 py-0.5 font-mono text-sm text-white">tablename</code>{" "}
                   —only SELECT queries are allowed.
                 </p>
               </div>
             </div>
-            <textarea
-              value={sql}
-              onChange={(event) => setSql(event.target.value)}
-              className="min-h-[220px] w-full rounded-2xl border border-white/20 bg-black/30 px-4 py-3 font-mono text-base text-white shadow-inner focus:border-white/60 focus:outline-none"
-              spellCheck={false}
-            />
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={runQuery}
-                disabled={isQuerying || !uploadId}
-                className="rounded-full bg-white/90 px-6 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-white disabled:cursor-not-allowed disabled:bg-white/40"
-              >
-                {isQuerying ? "Running..." : "Run query"}
-              </button>
-              {queryError && (
-                <span className="text-sm text-rose-300">{queryError}</span>
-              )}
-              {uploadId && !queryError && !isQuerying && (
-                <span className="text-xs uppercase tracking-wide text-slate-200">
-                  Upload ID: {uploadId}
-                </span>
-              )}
+            <div className="space-y-4 rounded-2xl border border-white/30 bg-black/30 px-6 py-10">
+              <textarea
+                value={sql}
+                onChange={(event) => setSql(event.target.value)}
+                className="min-h-[220px] w-full rounded-xl border border-white/20 bg-black/20 px-4 py-3 font-mono text-base text-white shadow-inner focus:border-white/60 focus:outline-none"
+                spellCheck={false}
+              />
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={runQuery}
+                  disabled={isQuerying || !uploadId}
+                  className="rounded-full bg-white/90 px-6 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-white disabled:cursor-not-allowed disabled:bg-white/40"
+                >
+                  {isQuerying ? "Running..." : "Run query"}
+                </button>
+                {queryError && <span className="text-sm text-rose-300">{queryError}</span>}
+                {uploadId && !queryError && !isQuerying && (
+                  <span className="text-xs uppercase tracking-wide text-slate-200">Upload ID: {uploadId}</span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -285,50 +269,49 @@ export default function Home() {
                 </p>
               </div>
             </div>
-            {queryResult ? (
-              <>
-                <div className="text-sm text-slate-200">
-                  Returned {queryResult.rows.length.toLocaleString()} rows in{" "}
-                  {queryResult.executionTimeMs} ms
-                  {queryResult.truncated && " (truncated)"}
-                </div>
-                <div className="overflow-auto rounded-2xl border border-white/10 bg-black/30">
-                  <table className="min-w-full divide-y divide-white/15 text-left text-sm text-white">
-                    <thead className="bg-black/20">
-                      <tr>
-                        {queryResult.columns.map((col) => (
-                          <th key={col.name} className="px-4 py-2 font-semibold">
-                            <div>{col.name}</div>
-                            <div className="text-xs font-normal text-slate-200">
-                              {col.type}
-                            </div>
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5">
-                      {queryResult.rows.map((row, rowIndex) => (
-                        <tr key={rowIndex} className="hover:bg-white/5">
+            <div className="space-y-4 rounded-2xl border border-white/30 bg-black/30 px-6 py-10">
+              {queryResult && queryResult.columns.length > 0 ? (
+                <>
+                  <div className="text-sm text-slate-200">
+                    Returned {queryResult.rows.length.toLocaleString()} rows in {queryResult.executionTimeMs} ms
+                    {queryResult.truncated && " (truncated)"}
+                  </div>
+                  <div className="overflow-auto rounded-xl border border-white/15 bg-black/40">
+                    <table className="min-w-full divide-y divide-white/15 text-left text-sm text-white">
+                      <thead className="bg-black/20">
+                        <tr>
                           {queryResult.columns.map((col) => (
-                            <td key={col.name} className="px-4 py-2 font-mono text-xs">
-                              {formatCell(row[col.name])}
-                            </td>
+                            <th key={col.name} className="px-4 py-2 font-semibold">
+                              <div>{col.name}</div>
+                              <div className="text-xs font-normal text-slate-200">{col.type}</div>
+                            </th>
                           ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {queryResult.rows.map((row, rowIndex) => (
+                          <tr key={rowIndex} className="hover:bg-white/5">
+                            {queryResult.columns.map((col) => (
+                              <td key={col.name} className="px-4 py-2 font-mono text-xs">
+                                {formatCell(row[col.name])}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              ) : (
+                <div className="rounded-xl border border-dashed border-white/30 bg-black/40 px-4 py-6 text-center text-sm text-slate-200">
+                  Results will appear here after you run a query.
                 </div>
-              </>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-white/20 bg-black/20 px-4 py-6 text-center text-sm text-slate-200">
-                Results will appear here after you run a query.
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </section>
-        </div>
-      </main>
+      </div>
+    </main>
   );
 }
 
@@ -383,23 +366,15 @@ function GraphBackground({ pointer }: { pointer: Pointer }) {
   }, []);
 
   useEffect(() => {
-    // We only need a simple "has mounted" flag to avoid SSR/client float mismatches.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHasMounted(true);
   }, []);
 
   if (!hasMounted) {
-    // Avoid rendering on the server so we don't hit hydration mismatches
-    // from tiny floating point differences between Node and the browser.
     return null;
   }
 
   return (
-    <svg
-      className="pointer-events-none absolute inset-0 h-full w-full opacity-70"
-      viewBox="0 0 100 100"
-      preserveAspectRatio="xMidYMid slice"
-    >
+    <svg className="pointer-events-none absolute inset-0 h-full w-full opacity-70" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">
       <defs>
         <linearGradient id="pageGradient" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#020617" />
@@ -416,20 +391,8 @@ function GraphBackground({ pointer }: { pointer: Pointer }) {
         </radialGradient>
       </defs>
 
-      {/* Base vertical gradient that spans the whole page area */}
-      <rect
-        x="0"
-        y="0"
-        width="100"
-        height="100"
-        fill="url(#pageGradient)"
-        opacity="0.99"
-      />
+      <rect x="0" y="0" width="100" height="100" fill="url(#pageGradient)" opacity="0.99" />
 
-      {/*
-        Compute the "live" node positions first so edges and nodes share the same
-        coordinates. This keeps every node visually attached to its incident edges.
-      */}
       {(() => {
         const px = pointer.x * 100;
         const py = pointer.y * 100;
@@ -455,7 +418,6 @@ function GraphBackground({ pointer }: { pointer: Pointer }) {
               const a = adjustedNodes[from];
               const b = adjustedNodes[to];
 
-              // Bend edges slightly toward the cursor at their midpoints.
               const midX = (a.x + b.x) / 2 / 100;
               const midY = (a.y + b.y) / 2 / 100;
               const dx = pointer.x - midX;
@@ -468,9 +430,7 @@ function GraphBackground({ pointer }: { pointer: Pointer }) {
               return (
                 <path
                   key={`${from}-${to}`}
-                  d={`M ${a.x} ${a.y} Q ${midX * 100 + bendX} ${
-                    midY * 100 + bendY
-                  } ${b.x} ${b.y}`}
+                  d={`M ${a.x} ${a.y} Q ${midX * 100 + bendX} ${midY * 100 + bendY} ${b.x} ${b.y}`}
                   fill="none"
                   stroke="url(#edgeGradient)"
                   strokeWidth={0.18}
@@ -487,13 +447,7 @@ function GraphBackground({ pointer }: { pointer: Pointer }) {
 
               return (
                 <g key={index} opacity={0.3 + node.pull * 0.7}>
-                  <circle
-                    cx={node.x}
-                    cy={node.y}
-                    r={haloRadius}
-                    fill="url(#nodeGlow)"
-                    opacity={0.5 + node.pull * 0.4}
-                  />
+                  <circle cx={node.x} cy={node.y} r={haloRadius} fill="url(#nodeGlow)" opacity={0.5 + node.pull * 0.4} />
                   <circle cx={node.x} cy={node.y} r={coreRadius} fill="#f8fafc" />
                 </g>
               );

@@ -3,26 +3,34 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "TURBOPACK=0 NEXT_DISABLE_TURBOPACK=1 next dev",
-    "build": "TURBOPACK=0 NEXT_DISABLE_TURBOPACK=1 next build",
-    "start": "next start",
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
+    "dev:client": "vite --config vite.config.mjs",
+    "dev:server": "tsx src/server.ts",
+    "build": "vite build --config vite.config.mjs && tsc -p tsconfig.server.json",
+    "start": "node dist/server.js",
     "lint": "eslint"
   },
   "dependencies": {
     "busboy": "^1.6.0",
     "duckdb": "^1.4.2",
-    "next": "15.1.6",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@vitejs/plugin-react": "^5.1.0",
+    "concurrently": "^8.2.2",
     "eslint": "^9",
-    "eslint-config-next": "15.1.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "tsx": "^4.19.1",
+    "typescript": "^5",
+    "vite": "^5.4.10"
   }
 }

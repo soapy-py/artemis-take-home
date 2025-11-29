@@ -36,18 +36,12 @@ async function withConnection<T>(
     return await handler(conn);
   } finally {
     await new Promise<void>((resolve, reject) => {
-      conn.close((err) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        db.close((closeErr) => {
-          if (closeErr) {
-            reject(closeErr);
-            return;
-          }
+      db.close((closeErr) => {
+        if (closeErr) {
+          reject(closeErr);
+        } else {
           resolve();
-        });
+        }
       });
     });
   }
@@ -101,10 +95,12 @@ export async function ingestCsv(
 }
 
 function mapColumns(meta: ColumnInfo[]): ColumnMeta[] {
-  return meta.map((col) => ({
-    name: col.name,
-    type: col.type.sql_type,
-  }));
+  return meta
+    .filter((col): col is ColumnInfo => Boolean(col))
+    .map((col, index) => ({
+      name: col?.name ?? `column_${index}`,
+      type: col?.type?.sql_type ?? "unknown",
+    }));
 }
 
 export async function runUserQuery(
@@ -120,39 +116,57 @@ export async function runUserQuery(
   }
 
   return withConnection(dbPath, async (conn) => {
-    const statement = conn.prepare(
-      `SELECT * FROM (${trimmed}) AS user_query LIMIT ${MAX_QUERY_ROWS + 1}`,
-    );
-    const columns = mapColumns(statement.columns());
+    // Apply the row cap directly to the user query to avoid metadata quirks from nested SELECTs.
+    const limitedSql = `${trimmed} LIMIT ${MAX_QUERY_ROWS + 1}`;
 
     const start = performance.now();
-    let rows: DuckRow[] = [];
-    try {
-      rows = await new Promise<DuckRow[]>((resolve, reject) => {
-        statement.all((err, data) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(data as DuckRow[]);
-          }
-        });
+    const rows = await new Promise<DuckRow[]>((resolve, reject) => {
+      conn.all(limitedSql, (err, data) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve((data as DuckRow[]) ?? []);
+        }
       });
-    } finally {
-      statement.finalize();
+    });
+
+    // Derive columns from metadata if available; otherwise infer from first row.
+    let columns: ColumnMeta[] = [];
+    if (rows.length > 0) {
+      const firstRow = rows[0];
+      columns = Object.keys(firstRow).map((key, index) => ({
+        name: key || `column_${index}`,
+        type: typeof firstRow[key] === "number" ? "DOUBLE" : "VARCHAR",
+      }));
     }
+    if (columns.length === 0) {
+      throw new Error("Query returned no columns");
+    }
+
+    // Normalize BigInt and other non-JSON-safe values.
+    const normalizedRows = rows.map((row) => {
+      const next: DuckRow = {};
+      for (const [key, value] of Object.entries(row)) {
+        next[key] =
+          typeof value === "bigint"
+            ? value.toString()
+            : value;
+      }
+      return next;
+    });
+
     const duration = performance.now() - start;
 
     const truncated = rows.length > MAX_QUERY_ROWS;
     if (truncated) {
-      rows.length = MAX_QUERY_ROWS;
+      normalizedRows.length = MAX_QUERY_ROWS;
     }
 
     return {
       columns,
-      rows,
+      rows: normalizedRows,
       truncated,
       executionTimeMs: Math.round(duration),
     };
   });
 }
-
